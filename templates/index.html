@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NARAD Secure Comms</title>
+    <!-- Tactical Monospace Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="crt-overlay"></div>
+    
+    <div class="container">
+        <!-- Header -->
+        <header class="cyber-header">
+            <div class="header-status">
+                <span class="status-dot"></span>
+                <span class="status-text">SECURE FREQUENCY: <span id="room-id-display">ESTABLISHING...</span></span>
+            </div>
+            <h1 class="logo">NARAD <span>v1.2</span></h1>
+            
+            <div class="header-controls">
+                <button id="dictate-btn" class="tactical-btn voice-idle">
+                    <span class="radar-icon">🎙️</span> SECURE DICTATION
+                </button>
+                <button id="terminate-btn" class="tactical-btn terminate-btn">
+                    <span class="radar-icon">⚠️</span> TERMINATE LINK
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Chat Area -->
+        <main class="chat-display" id="chat-window">
+            <div class="system-msg">
+                [SYSTEM]: Initialization complete. E2EE active. AES-256 protocol engaged.
+            </div>
+            <div class="system-msg">
+                [SYSTEM]: Waiting for remote operative...
+            </div>
+        </main>
+
+        <!-- Input Area -->
+        <footer class="input-area">
+            <input type="text" id="message-input" placeholder="> Enter transmission..." autocomplete="off">
+            <button id="send-btn" class="tactical-btn primary-btn">TRANSMIT</button>
+        </footer>
+    </div>
+
+    <!-- Crypto-JS for Local Network HTTP Encryption -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <!-- Socket.IO library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <!-- Frontend Logic -->
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
