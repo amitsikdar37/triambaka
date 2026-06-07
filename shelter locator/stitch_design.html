@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>EVAC-01 Command Center</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-fixed-dim": "#d8c4a4",
+                        "on-tertiary": "#601400",
+                        "on-background": "#e2e2e2",
+                        "on-secondary-container": "#c6b393",
+                        "on-error": "#690005",
+                        "error": "#ffb4ab",
+                        "surface": "#121414",
+                        "on-error-container": "#ffdad6",
+                        "secondary-container": "#52452c",
+                        "inverse-on-surface": "#2f3131",
+                        "on-primary-fixed-variant": "#434b18",
+                        "tertiary-container": "#962500",
+                        "surface-bright": "#383939",
+                        "on-surface-variant": "#c8c7b8",
+                        "surface-container-lowest": "#0d0f0f",
+                        "secondary": "#d8c4a4",
+                        "tertiary-fixed-dim": "#ffb5a0",
+                        "inverse-primary": "#5a632e",
+                        "surface-container-highest": "#333535",
+                        "secondary-fixed": "#f5e0bf",
+                        "surface-variant": "#333535",
+                        "background": "#121414",
+                        "surface-tint": "#c3cc8c",
+                        "on-primary": "#2d3404",
+                        "error-container": "#93000a",
+                        "on-primary-fixed": "#191e00",
+                        "on-primary-container": "#bdc787",
+                        "surface-dim": "#121414",
+                        "on-secondary-fixed": "#241a06",
+                        "outline": "#919283",
+                        "tertiary-fixed": "#ffdbd1",
+                        "surface-container": "#1e2020",
+                        "on-tertiary-container": "#ffad96",
+                        "primary-container": "#4b5320",
+                        "on-surface": "#e2e2e2",
+                        "outline-variant": "#47483c",
+                        "inverse-surface": "#e2e2e2",
+                        "tertiary": "#ffb5a0",
+                        "on-tertiary-fixed": "#3b0900",
+                        "on-secondary-fixed-variant": "#52452c",
+                        "primary": "#c3cc8c",
+                        "surface-container-high": "#282a2a",
+                        "primary-fixed": "#dfe8a6",
+                        "on-secondary": "#3b2f18",
+                        "primary-fixed-dim": "#c3cc8c",
+                        "on-tertiary-fixed-variant": "#872000",
+                        "surface-container-low": "#1a1c1c"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0rem",
+                        "lg": "0rem",
+                        "xl": "0rem",
+                        "full": "0rem"
+                    },
+                    "spacing": {
+                        "container-max-width": "1440px",
+                        "panel-border": "2px",
+                        "unit": "4px",
+                        "margin": "24px",
+                        "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Space Grotesk"],
+                        "headline-lg-mobile": ["Space Grotesk"],
+                        "body-lg": ["JetBrains Mono"],
+                        "headline-md": ["Space Grotesk"],
+                        "body-md": ["JetBrains Mono"],
+                        "label-caps": ["JetBrains Mono"],
+                        "headline-sm": ["Space Grotesk"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["48px", { "lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-lg-mobile": ["32px", { "lineHeight": "1.1", "fontWeight": "700" }],
+                        "body-lg": ["18px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "headline-md": ["32px", { "lineHeight": "1.2", "fontWeight": "700" }],
+                        "body-md": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "label-caps": ["12px", { "lineHeight": "1", "letterSpacing": "0.1em", "fontWeight": "700" }],
+                        "headline-sm": ["20px", { "lineHeight": "1.2", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: theme('colors.background'); color: theme('colors.on-background'); }
+        .bg-grit { background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><filter id="noiseFilter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noiseFilter)" opacity="0.05"/></svg>'); }
+        .terminal-scroll::-webkit-scrollbar { width: 4px; }
+        .terminal-scroll::-webkit-scrollbar-track { background: theme('colors.surface-container-low'); }
+        .terminal-scroll::-webkit-scrollbar-thumb { background: theme('colors.primary'); }
+    </style>
+</head>
+<body class="bg-grit min-h-screen flex flex-col font-body-md overflow-hidden">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-margin h-16 bg-surface dark:bg-surface text-primary dark:text-primary font-headline-sm border-b-2 border-outline dark:border-outline-variant transition-colors duration-100 ease-linear">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-3xl">shield</span>
+<div class="font-headline-md text-headline-md font-bold uppercase tracking-tighter text-primary">C2 COMMAND CENTER</div>
+<div class="ml-4 flex items-center gap-2 border-2 border-error text-error px-2 py-1 bg-error-container bg-opacity-20">
+<span class="w-2 h-2 rounded-full bg-error animate-pulse"></span>
+<span class="font-label-caps text-label-caps uppercase tracking-widest font-bold">LIVE STATUS</span>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<button class="bg-tertiary-container hover:bg-tertiary text-on-tertiary-container font-label-caps text-label-caps uppercase font-bold px-6 py-3 border-2 border-tertiary transition-colors">
+                STOP TRACKING
+            </button>
+<div class="flex gap-4">
+<span class="material-symbols-outlined hover:bg-primary-container hover:text-on-primary-container p-2 cursor-pointer transition-colors" data-icon="notifications">notifications</span>
+<span class="material-symbols-outlined hover:bg-primary-container hover:text-on-primary-container p-2 cursor-pointer transition-colors" data-icon="settings">settings</span>
+<span class="material-symbols-outlined hover:bg-primary-container hover:text-on-primary-container p-2 cursor-pointer transition-colors" data-icon="wifi_tethering">wifi_tethering</span>
+</div>
+<div class="w-10 h-10 border-2 border-primary overflow-hidden">
+<img alt="Commander Avatar" class="w-full h-full object-cover" data-alt="A close-up portrait of a stern military commander in dark olive tactical gear, illuminated by high-contrast, harsh lighting typical of a subterranean command bunker. The background is a stark charcoal gray. The overall aesthetic is gritty, authoritative, and serious, aligning with a high-stakes tactical UI." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDs_Dg2aa-5hXrK3b2a2mAeZ1Nq04mGYcpPzKtzl9tLd1g0YZ4zkvax4ptwmwzQgxCX3JUbDGApMSI4imOAyElzzpY0loYbPaWEEZ4astyRaqwpLwDAcZBnGQpKRhPwb6ERVHINL6IRYcIu3HWRFAam73hSsx8jmcHaF6tnO6Cb_bO9fpDZMEfUrO96SdrxfZSdAdbnFYASKoi2jKwk-2mhW89aN__FdiL5DbqcEz5g0njPk9u64AqWz3H5JFAsFaXfLlzP6U_Yfew"/>
+</div>
+</div>
+</header>
+<div class="flex flex-1 pt-16">
+<!-- SideNavBar -->
+<nav class="flex flex-col h-[calc(100vh-64px)] w-80 py-gutter bg-surface-container dark:bg-surface-container text-secondary dark:text-secondary font-label-caps text-label-caps uppercase border-r-2 border-outline dark:border-outline-variant shrink-0 relative z-40">
+<div class="px-6 mb-8 border-b-2 border-outline-variant pb-6">
+<div class="font-headline-sm text-headline-sm font-bold text-on-surface mb-1">EVAC-01</div>
+<div class="text-on-surface-variant font-body-md text-xs tracking-widest opacity-80">SECTOR DELTA ACTIVE</div>
+</div>
+<div class="flex flex-col flex-1 gap-2 px-4">
+<a class="flex items-center gap-4 px-4 py-3 bg-primary text-on-primary font-bold border-l-4 border-on-primary-container active:scale-95 transition-all duration-75" href="#">
+<span class="material-symbols-outlined" data-icon="map">map</span>
+<span class="">TACTICAL MAP</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high hover:bg-surface-variant dark:hover:bg-surface-variant active:scale-95 transition-all duration-75" href="#">
+<span class="material-symbols-outlined" data-icon="psychology">psychology</span>
+<span class="">INTEL</span>
+</a>
+</div>
+<div class="px-6 mt-auto">
+<div class="border-t-2 border-outline-variant pt-6 mb-6">
+<button class="w-full bg-error-container hover:bg-error text-on-error-container font-label-caps text-label-caps uppercase font-bold py-3 border-2 border-error transition-colors flex justify-center items-center gap-2">
+<span class="material-symbols-outlined text-lg">warning</span>
+                        EMERGENCY BROADCAST
+                    </button>
+</div>
+<div class="flex flex-col gap-2">
+<a class="flex items-center gap-4 px-4 py-2 text-on-surface-variant hover:bg-surface-variant transition-colors" href="#">
+<span class="material-symbols-outlined text-sm" data-icon="settings_input_component">settings_input_component</span>
+<span class="">SYSTEMS</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-2 text-on-surface-variant hover:bg-surface-variant transition-colors" href="#">
+<span class="material-symbols-outlined text-sm" data-icon="power_settings_new">power_settings_new</span>
+<span class="">LOGOUT</span>
+</a>
+</div>
+</div>
+</nav>
+<!-- Main Canvas (Tactical Map) -->
+<main class="flex-1 relative bg-surface-container-lowest overflow-hidden">
+<!-- Tactical Map Overlay / Placeholder Image -->
+<div class="absolute inset-0 z-0 bg-surface-container-lowest">
+<div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(circle, theme('colors.primary') 1px, transparent 1px); background-size: 40px 40px;"></div>
+<div class="absolute inset-0 opacity-5" style="background-image: linear-gradient(theme('colors.primary') 1px, transparent 1px), linear-gradient(90deg, theme('colors.primary') 1px, transparent 1px); background-size: 200px 200px;"></div>
+</div>
+<!-- Grid Overlay -->
+<!-- UI Overlay Elements -->
+<div class="relative z-20 h-full p-6 flex flex-col justify-between pointer-events-none">
+<!-- Top Right Data Bunker -->
+<div class="self-end pointer-events-auto">
+<div class="bg-surface-container-low border border-outline-variant w-72 flex flex-col">
+<div class="bg-surface-container-high text-primary px-3 py-1.5 font-label-caps text-[10px] uppercase tracking-[0.2em] flex justify-between items-center border-b border-outline-variant">
+<span>ASSET TRACKING</span>
+<span class="material-symbols-outlined text-xs">radar</span>
+</div>
+<div class="p-3 flex flex-col gap-2 font-mono text-[11px]">
+<div class="flex justify-between items-center opacity-80">
+<span class="text-on-surface-variant">CV RAMAN</span>
+<span class="text-primary">[ SECURED ]</span>
+</div>
+<div class="flex justify-between items-center opacity-80">
+<span class="text-on-surface-variant">KALAM</span>
+<span class="text-secondary">[ IN TRANSIT ]</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-on-surface-variant">ARYABHATTA</span>
+<span class="text-error animate-pulse">[ ALERT ]</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Tactical Markers Legend -->
+<div class="self-start pointer-events-auto">
+<div class="bg-surface-container-low border border-outline-variant w-72 flex flex-col">
+<div class="bg-surface-container-high text-primary px-3 py-1.5 font-label-caps text-[10px] uppercase tracking-[0.2em] flex justify-between items-center border-b border-outline-variant">
+<span>BUNKER LOCATIONS</span>
+<span class="material-symbols-outlined text-xs">grid_view</span>
+</div>
+<div class="p-3 flex flex-col gap-2 font-mono text-[11px] text-on-surface-variant">
+<div class="flex items-center gap-3">
+<div class="w-4 h-4 border border-primary flex items-center justify-center text-[9px] text-primary">A</div>
+<span>ACADEMIC ALPHA</span>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-4 h-4 border border-secondary flex items-center justify-center text-[9px] text-secondary rotate-45"><span class="-rotate-45">M</span></div>
+<span>MAIN GATE</span>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-4 h-4 rounded-full border border-tertiary flex items-center justify-center text-[9px] text-tertiary">S</div>
+<span>SPORTS FIELD</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Simulated Map Markers (Positioned absolutely over the map) -->
+<div class="absolute top-1/3 left-1/4 z-30 pointer-events-auto cursor-crosshair">
+<div class="relative group"><div class="w-6 h-6 border border-primary bg-surface-container-lowest flex items-center justify-center font-bold text-[10px] text-primary shadow-none">
+  A
+</div>
+<div class="absolute top-full left-1/2 -translate-x-1/2 mt-1 w-max bg-surface-container-high border border-outline-variant px-2 py-0.5 font-mono text-[9px] text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+  ALPHA_SEC_01
+</div></div>
+</div>
+</main>
+<!-- Right Status Terminal (Optional extension based on prompt "STATUS LOG") -->
+<aside class="flex flex-col h-[calc(100vh-64px)] w-80 py-gutter bg-surface-container-high dark:bg-surface-container-high text-primary font-body-md text-xs border-l-2 border-outline shrink-0 z-40 relative">
+<div class="px-4 mb-2 flex items-center justify-between">
+<span class="font-label-caps text-label-caps uppercase font-bold text-on-surface">STATUS LOG</span>
+<span class="w-2 h-2 bg-primary rounded-full animate-ping"></span>
+</div>
+<div class="flex-1 px-4 overflow-y-auto terminal-scroll break-words whitespace-pre-wrap font-mono" id="terminal-log">
+&gt; INITIALIZING UPLINK...
+&gt; ESTABLISHED.
+&gt; FETCHING TELEMETRY...
+[19:06:29] CV Raman pos updated.
+[19:06:35] Warning: Motion detected near Main Gate.
+[19:07:01] Kalam beacon weak signal.
+[19:07:15] Aryabhatta requesting evac path.
+[19:08:00] Drone sweep initiated Sector B.
+_
+            
+[19:08:45] Scan complete. No hostiles.
+
+[19:09:12] Resource drop inbound to Sports Field.
+
+[19:10:05] Comms relay re-established.
+
+WARNING: Weather alert in T-minus 10.
+
+&gt; STANDBY...
+
+[19:08:45] Scan complete. No hostiles.
+
+[19:09:12] Resource drop inbound to Sports Field.
+_</div>
+</aside>
+</div>
+<script>
+        // Simple script to simulate terminal text
+        const terminal = document.getElementById('terminal-log');
+        const messages = [
+            "[19:08:45] Scan complete. No hostiles.",
+            "[19:09:12] Resource drop inbound to Sports Field.",
+            "[19:10:05] Comms relay re-established.",
+            "WARNING: Weather alert in T-minus 10."
+        ];
+        let msgIndex = 0;
+
+        setInterval(() => {
+            if (msgIndex < messages.length) {
+                // remove cursor
+                terminal.innerHTML = terminal.innerHTML.slice(0, -1);
+                terminal.innerHTML += '\n' + messages[msgIndex] + '\n_';
+                terminal.scrollTop = terminal.scrollHeight;
+                msgIndex++;
+            } else {
+                 terminal.innerHTML = terminal.innerHTML.slice(0, -1);
+                 terminal.innerHTML += '\n> STANDBY...\n_';
+                 msgIndex = 0; // loop for demo
+            }
+        }, 5000);
+    </script>
+</body></html>

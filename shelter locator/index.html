@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SeshNag — Command Center</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div id="ui-container">
+        <div id="sidebar">
+            <h1>Sesh <span class="highlight">Nag</span></h1>
+            <p>IIT Patna Evacuation Protocol</p>
+
+            <div id="controls-header"
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <div id="live-indicator" class="hidden">
+                    <span class="pulse"></span> LIVE
+                </div>
+            </div>
+
+            <!-- Connected Users Counter -->
+            <div id="users-panel" style="margin-bottom: 15px; padding: 10px; background: #0f150e; border: 1px solid var(--border-color); border-radius: 4px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 0.75rem; color: #8a9985; text-transform: uppercase; letter-spacing: 0.1em;">Connected Users</span>
+                    <span id="user-count" style="font-size: 1.3rem; font-weight: 900; color: #00ccff;">0</span>
+                </div>
+                <div style="margin-top: 8px; font-size: 0.65rem; color: #666;">
+                    Share link: <a id="join-link" href="/join.html" target="_blank" style="color: var(--accent); text-decoration: none;">/join.html</a>
+                </div>
+            </div>
+
+            <!-- Evacuate Button -->
+            <button id="evacuate-btn" onclick="triggerEvacuation()" 
+                style="background: var(--error); color: white; margin-bottom: 10px; width: 100%; font-size: 1rem;">
+                🚨 EVACUATE ALL
+            </button>
+
+            <div id="dashboard">
+                <h3>STATUS LOG</h3>
+                <div id="log-container">
+                    <p class="sys-msg">System Ready. Waiting for users to connect...</p>
+                </div>
+            </div>
+
+            <div id="sms-panel" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color);">
+                <h3 style="color: #00ccff;">TELEGRAM BROADCAST</h3>
+                <p style="font-size: 0.8rem; color: #aaa; margin-bottom: 10px;">Send evacuation alert to all Telegram contacts.</p>
+                <button id="send-sms-btn" onclick="sendTelegramBroadcast()"
+                    style="background: #00ccff; color: #000; border: none; padding: 10px; width: 100%; border-radius: 4px; font-weight: bold; cursor: pointer; text-transform: uppercase;">
+                    Broadcast Telegram Alert
+                </button>
+            </div>
+        </div>
+        <div id="map"></div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Socket.io Client (served automatically by the server) -->
+    <script src="/socket.io/socket.io.js"></script>
+    <!-- Map Logic -->
+    <script src="map_logic.js"></script>
+</body>
+
+</html>
