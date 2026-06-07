@@ -2,6 +2,7 @@ services:
   - type: web
     name: project-narad
     env: python
+    rootDir: narad
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn -k geventwebsocket.gunicorn.workers.GeventWebSocketWorker -w 1 app:app
     envVars:
