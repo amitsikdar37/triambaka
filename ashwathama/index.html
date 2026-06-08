@@ -134,7 +134,8 @@
 
         async function fetchBackendData() {
             try {
-                const response = await fetch('telemetry.json', { cache: "no-store" });
+                let fetchUrl = window.location.port === "5500" ? "https://localhost:5000/telemetry.json" : "telemetry.json";
+                const response = await fetch(fetchUrl, { cache: "no-store" });
                 const data = await response.json();
                 
                 if (data.timestamp !== lastTimestamp) {
