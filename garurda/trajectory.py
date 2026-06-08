@@ -278,6 +278,38 @@ while True:
         2
     )
 
+    # Calculate values to return to original trajectory
+    min_dist = float('inf')
+    closest_pt = planned_path[0]
+    for pt in planned_path:
+        dist = (pt[0] - x)**2 + (pt[1] - y)**2
+        if dist < min_dist:
+            min_dist = dist
+            closest_pt = pt
+            
+    return_x = closest_pt[0] - x
+    return_y = closest_pt[1] - y
+
+    cv2.putText(
+        frame,
+        f"RETURN X : {return_x}",
+        (20, 280),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.7,
+        (0, 255, 255),
+        2
+    )
+
+    cv2.putText(
+        frame,
+        f"RETURN Y : {return_y}",
+        (20, 320),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.7,
+        (0, 255, 255),
+        2
+    )
+
     cv2.imshow(
         "Garuda Dashboard",
         frame
