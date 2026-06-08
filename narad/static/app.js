@@ -130,50 +130,127 @@ socket.on('system_message', (data) => {
 // ==========================================
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition = null;
+let isButtonHeld = false;
 
-if (SpeechRecognition) {
-    recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    
-    recognition.onstart = function() {
+// Prevent context menu and selection on the button for mobile hold
+dictateBtn.style.userSelect = 'none';
+dictateBtn.style.webkitUserSelect = 'none';
+dictateBtn.style.webkitTouchCallout = 'none';
+
+function updateDictateBtnState(recording) {
+    if (recording) {
         dictateBtn.classList.remove('voice-idle');
         dictateBtn.classList.add('voice-recording');
         dictateBtn.innerHTML = '<span class="radar-icon">🎙️</span> RECORDING...';
+    } else {
+        dictateBtn.classList.remove('voice-recording');
+        dictateBtn.classList.add('voice-idle');
+        dictateBtn.innerHTML = '<span class="radar-icon">🎙️</span> HOLD TO DICTATE';
+    }
+}
+
+if (SpeechRecognition) {
+    recognition = new SpeechRecognition();
+    recognition.continuous = false; // Mobile-friendly: continuous=true is buggy on Android/iOS
+    recognition.interimResults = false;
+    
+    recognition.onstart = function() {
+        updateDictateBtnState(true);
     };
     
     recognition.onresult = async function(event) {
-        const transcript = event.results[0][0].transcript;
-        const formattedMsg = `[VOICE TRANSCRIPT]: ${transcript}`;
-        
-        appendMessage(formattedMsg, 'msg-self');
-        const encrypted = await encryptMessage(formattedMsg);
-        socket.emit('encrypted_message', { room: room, ciphertext: encrypted.ciphertext, iv: encrypted.iv });
+        const transcript = event.results[0][0].transcript.trim();
+        if (transcript) {
+            const formattedMsg = `[VOICE TRANSCRIPT]: ${transcript}`;
+            appendMessage(formattedMsg, 'msg-self');
+            const encrypted = await encryptMessage(formattedMsg);
+            socket.emit('encrypted_message', { room: room, ciphertext: encrypted.ciphertext, iv: encrypted.iv });
+        }
     };
     
     recognition.onend = function() {
-        dictateBtn.classList.remove('voice-recording');
-        dictateBtn.classList.add('voice-idle');
-        dictateBtn.innerHTML = '<span class="radar-icon">🎙️</span> SECURE DICTATION';
+        // If button is still held down, start it again immediately (seamless continuous recording)
+        if (isButtonHeld) {
+            try {
+                recognition.start();
+            } catch(e) {
+                updateDictateBtnState(false);
+            }
+        } else {
+            updateDictateBtnState(false);
+        }
     };
     
     recognition.onerror = function(event) {
-        console.error("Speech recognition error", event.error);
-        dictateBtn.classList.remove('voice-recording');
-        dictateBtn.classList.add('voice-idle');
-        dictateBtn.innerHTML = '<span class="radar-icon">🎙️</span> SECURE DICTATION';
+        if (event.error === 'not-allowed') {
+            alert("Microphone access denied. Please allow microphone permissions and ensure you are using HTTPS.");
+            isButtonHeld = false;
+        } else if (event.error === 'network') {
+            alert("Network error occurred. The Web Speech API requires an internet connection.");
+            isButtonHeld = false;
+        } else if (event.error !== 'no-speech' && event.error !== 'no-match') {
+            console.warn("Speech recognition error: " + event.error);
+        }
+        updateDictateBtnState(false);
     };
 } else {
     dictateBtn.style.display = 'none';
 }
 
-dictateBtn.addEventListener('click', () => {
+let isTouchDevice = false;
+
+function startDictation(e) {
+    if (e.type === 'touchstart') isTouchDevice = true;
+    if (e.type === 'mousedown' && isTouchDevice) return; // Prevent double firing
+    
+    if (!window.isSecureContext) {
+        alert("Voice dictation requires a secure connection (HTTPS or localhost). Please ensure you are using the 'https://' version of your ngrok link.");
+        return;
+    }
     if (recognition && cryptoKey) {
-        recognition.start();
+        if (!isButtonHeld) {
+            isButtonHeld = true;
+            try {
+                recognition.start();
+            } catch(e) {
+                console.error("Recognition already started or error:", e);
+            }
+        }
     } else if (!SpeechRecognition) {
         alert("Your browser does not support Voice Dictation. Please use Chrome or Edge.");
     }
-});
+}
+
+function stopDictation(e) {
+    if (e.type === 'touchend' || e.type === 'touchcancel') isTouchDevice = true;
+    if ((e.type === 'mouseup' || e.type === 'mouseleave') && isTouchDevice) return;
+    
+    if (isButtonHeld) {
+        isButtonHeld = false;
+        // The UI updates to idle immediately on 'onend'
+        if (recognition) {
+            try {
+                // Add a small delay before stopping to ensure the last word is fully captured and processed
+                setTimeout(() => {
+                    if (!isButtonHeld) {
+                        recognition.stop();
+                    }
+                }, 400);
+            } catch(e) {}
+        }
+    }
+}
+
+// Push-to-talk event listeners
+dictateBtn.addEventListener('mousedown', startDictation);
+window.addEventListener('mouseup', stopDictation);
+
+dictateBtn.addEventListener('touchstart', startDictation, {passive: true});
+window.addEventListener('touchend', stopDictation, {passive: true});
+window.addEventListener('touchcancel', stopDictation, {passive: true});
+
+// Set initial idle text
+updateDictateBtnState(false);
 
 
 // ==========================================
