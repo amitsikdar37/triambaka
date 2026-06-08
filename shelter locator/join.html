@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>SeshNag — Join Evacuation Network</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0d0f0f;
+            --surface: #1a1c1c;
+            --surface-high: #282a2a;
+            --border: rgba(19, 136, 8, 0.4);
+            --text: #e2e2e2;
+            --text-dim: #8a9985;
+            --primary: #c3cc8c;
+            --error: #ef4444;
+            --success: #138808;
+            --cyan: #00ccff;
+            --accent: #ff9933;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        .header {
+            width: 100%;
+            padding: 16px 20px;
+            border-bottom: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--surface);
+        }
+
+        .header-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: -0.01em;
+        }
+
+        .header-sub {
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        .shield-icon {
+            font-size: 1.5rem;
+        }
+
+        /* ---- Screens ---- */
+        .screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 420px;
+            padding: 30px 20px;
+            flex: 1;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        /* ---- Join Screen ---- */
+        #join-screen {
+            justify-content: center;
+            gap: 24px;
+        }
+
+        .join-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-align: center;
+            color: var(--text);
+        }
+
+        .join-title span {
+            color: var(--accent);
+        }
+
+        .join-desc {
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            line-height: 1.5;
+        }
+
+        .input-group {
+            width: 100%;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .input-group input {
+            width: 100%;
+            background: var(--surface-high);
+            border: 1.5px solid var(--border);
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            padding: 14px 16px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .input-group input:focus {
+            border-color: var(--primary);
+        }
+
+        .input-group input::placeholder {
+            color: #555;
+        }
+
+        .btn-primary {
+            width: 100%;
+            background: var(--primary);
+            color: #1a2419;
+            border: none;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            font-weight: 700;
+            padding: 16px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary:hover {
+            background: #d4dd9d;
+            transform: translateY(-1px);
+        }
+
+        .btn-primary:disabled {
+            background: #444;
+            color: #777;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* ---- Tracking Screen ---- */
+        #tracking-screen {
+            gap: 20px;
+            padding-top: 24px;
+        }
+
+        .status-card {
+            width: 100%;
+            background: var(--surface);
+            border: 1.5px solid var(--border);
+            overflow: hidden;
+        }
+
+        .status-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 14px;
+            background: var(--surface-high);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .status-card-header .tag {
+            font-size: 0.6rem;
+            color: var(--text-dim);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .status-badge {
+            padding: 3px 8px;
+            font-size: 0.6rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .badge-active {
+            background: rgba(19, 136, 8, 0.2);
+            color: #63e6be;
+            border: 1px solid rgba(19, 136, 8, 0.5);
+        }
+
+        .badge-waiting {
+            background: rgba(255, 153, 51, 0.2);
+            color: #ffd8a8;
+            border: 1px solid rgba(255, 153, 51, 0.5);
+        }
+
+        .badge-evacuate {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ff8787;
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            animation: flash 1s infinite;
+        }
+
+        @keyframes flash {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .status-card-body {
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+        }
+
+        .status-label {
+            color: var(--text-dim);
+        }
+
+        .status-value {
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .status-value.highlight-green {
+            color: #63e6be;
+        }
+
+        .status-value.highlight-cyan {
+            color: var(--cyan);
+        }
+
+        /* ---- Evacuation Alert ---- */
+        .evac-card {
+            display: none;
+            width: 100%;
+            background: rgba(239, 68, 68, 0.08);
+            border: 2px solid var(--error);
+            overflow: hidden;
+            animation: slideIn 0.4s ease;
+        }
+
+        .evac-card.active {
+            display: block;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .evac-header {
+            padding: 12px 14px;
+            background: rgba(239, 68, 68, 0.15);
+            border-bottom: 1px solid rgba(239, 68, 68, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .evac-header-text {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--error);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .evac-body {
+            padding: 16px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .evac-bunker-name {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .evac-distance {
+            font-size: 0.85rem;
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        .evac-instruction {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            line-height: 1.5;
+        }
+
+        .btn-directions {
+            width: 100%;
+            background: var(--error);
+            color: white;
+            border: none;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            font-weight: 700;
+            padding: 14px;
+            text-transform: uppercase;
+            cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+            display: block;
+            transition: background 0.2s;
+        }
+
+        .btn-directions:hover {
+            background: #dc2626;
+        }
+
+        /* ---- GPS Pulse ---- */
+        .gps-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+        }
+
+        .gps-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--success);
+            position: relative;
+        }
+
+        .gps-dot::after {
+            content: '';
+            position: absolute;
+            top: -4px;
+            left: -4px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            border: 2px solid rgba(19, 136, 8, 0.5);
+            animation: gps-pulse 1.5s infinite ease-out;
+        }
+
+        @keyframes gps-pulse {
+            0% { transform: scale(0.5); opacity: 1; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+
+        /* ---- Error Screen ---- */
+        #error-screen {
+            justify-content: center;
+            gap: 16px;
+            text-align: center;
+        }
+
+        .error-icon {
+            font-size: 3rem;
+        }
+
+        .error-msg {
+            font-size: 0.85rem;
+            color: var(--error);
+            line-height: 1.5;
+        }
+
+        .footer-note {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            padding: 10px;
+            text-align: center;
+            font-size: 0.6rem;
+            color: #444;
+            border-top: 1px solid #222;
+            background: var(--bg);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <span class="shield-icon">🛡️</span>
+        <div>
+            <div class="header-title">SeshNag</div>
+            <div class="header-sub">Evacuation Network</div>
+        </div>
+    </div>
+
+    <!-- Screen 1: Join -->
+    <div id="join-screen" class="screen active">
+        <div class="join-title">Join the <span>Evacuation Grid</span></div>
+        <div class="join-desc">
+            Enter your name and share your GPS location.<br>
+            Your position will be tracked in real time on the command center map.
+        </div>
+        <div class="input-group">
+            <label>Your Name / ID</label>
+            <input type="text" id="name-input" placeholder="e.g. Amit Sikdar" autofocus>
+        </div>
+        <button class="btn-primary" id="join-btn" onclick="joinNetwork()">
+            Share Location & Join
+        </button>
+    </div>
+
+    <!-- Screen 2: Tracking Active -->
+    <div id="tracking-screen" class="screen">
+        <div class="status-card">
+            <div class="status-card-header">
+                <span class="tag">GPS Telemetry</span>
+                <span class="status-badge badge-active" id="gps-badge">ACTIVE</span>
+            </div>
+            <div class="status-card-body">
+                <div class="gps-indicator">
+                    <div class="gps-dot"></div>
+                    <span>Location sharing active</span>
+                </div>
+                <div class="status-row">
+                    <span class="status-label">NAME:</span>
+                    <span class="status-value" id="display-name">—</span>
+                </div>
+                <div class="status-row">
+                    <span class="status-label">LATITUDE:</span>
+                    <span class="status-value highlight-cyan" id="display-lat">—</span>
+                </div>
+                <div class="status-row">
+                    <span class="status-label">LONGITUDE:</span>
+                    <span class="status-value highlight-cyan" id="display-lon">—</span>
+                </div>
+                <div class="status-row">
+                    <span class="status-label">ACCURACY:</span>
+                    <span class="status-value highlight-green" id="display-accuracy">—</span>
+                </div>
+                <div class="status-row">
+                    <span class="status-label">LAST UPDATE:</span>
+                    <span class="status-value" id="display-time">—</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Evacuation Assignment (hidden until triggered) -->
+        <div class="evac-card" id="evac-card">
+            <div class="evac-header">
+                <span>🚨</span>
+                <span class="evac-header-text">Evacuation Order</span>
+            </div>
+            <div class="evac-body">
+                <div class="evac-bunker-name" id="evac-bunker-name">—</div>
+                <div class="evac-distance" id="evac-distance">—</div>
+                <div class="evac-instruction">
+                    Proceed to the assigned bunker immediately.<br>
+                    Follow the shortest safe route. Stay calm.
+                </div>
+                <a class="btn-directions" id="evac-directions-btn" href="#" target="_blank">
+                    Open in Google Maps
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Screen 3: Error -->
+    <div id="error-screen" class="screen">
+        <div class="error-icon">⚠️</div>
+        <div class="error-msg" id="error-msg">
+            GPS access was denied. Please enable location services and reload.
+        </div>
+        <button class="btn-primary" onclick="location.reload()">Retry</button>
+    </div>
+
+    <div class="footer-note">
+        SeshNag Evacuation Protocol • IIT Patna
+    </div>
+
+    <!-- Socket.io client (served by the server) -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let watchId = null;
+        let userName = '';
+
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+
+        function joinNetwork() {
+            const nameInput = document.getElementById('name-input');
+            userName = nameInput.value.trim() || 'Anonymous';
+            const joinBtn = document.getElementById('join-btn');
+
+            if (!navigator.geolocation) {
+                document.getElementById('error-msg').textContent = 'Your browser does not support GPS. Use a modern browser.';
+                showScreen('error-screen');
+                return;
+            }
+
+            joinBtn.disabled = true;
+            joinBtn.textContent = 'REQUESTING GPS...';
+
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    // Got initial position — join the network
+                    const { latitude, longitude } = pos.coords;
+
+                    socket.emit('user:join', {
+                        name: userName,
+                        lat: latitude,
+                        lon: longitude
+                    });
+
+                    document.getElementById('display-name').textContent = userName;
+                    updateCoords(pos);
+                    showScreen('tracking-screen');
+
+                    // Start continuous watching
+                    watchId = navigator.geolocation.watchPosition(
+                        (newPos) => {
+                            updateCoords(newPos);
+                            socket.emit('user:location', {
+                                lat: newPos.coords.latitude,
+                                lon: newPos.coords.longitude
+                            });
+                        },
+                        (err) => {
+                            console.warn('GPS watch error:', err.message);
+                        },
+                        {
+                            enableHighAccuracy: true,
+                            maximumAge: 3000,
+                            timeout: 10000
+                        }
+                    );
+                },
+                (err) => {
+                    console.error('GPS error:', err);
+                    let msg = 'GPS access was denied.';
+                    if (err.code === 1) msg = 'Location permission denied. Please allow GPS access and reload.';
+                    if (err.code === 2) msg = 'Location unavailable. Make sure GPS is enabled on your device.';
+                    if (err.code === 3) msg = 'Location request timed out. Try again.';
+                    document.getElementById('error-msg').textContent = msg;
+                    showScreen('error-screen');
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 15000
+                }
+            );
+        }
+
+        function updateCoords(pos) {
+            document.getElementById('display-lat').textContent = pos.coords.latitude.toFixed(6);
+            document.getElementById('display-lon').textContent = pos.coords.longitude.toFixed(6);
+            document.getElementById('display-accuracy').textContent = `±${Math.round(pos.coords.accuracy)}m`;
+            document.getElementById('display-time').textContent = new Date().toLocaleTimeString();
+        }
+
+        // Receive evacuation assignment from server
+        socket.on('evacuate:assigned', (data) => {
+            const { bunkerName, bunkerLat, bunkerLon, distMeters } = data;
+
+            document.getElementById('evac-bunker-name').textContent = bunkerName;
+            document.getElementById('evac-distance').textContent = `📍 ${distMeters}m away`;
+
+            // Google Maps directions link
+            const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${bunkerLat},${bunkerLon}&travelmode=walking`;
+            document.getElementById('evac-directions-btn').href = mapsUrl;
+
+            document.getElementById('evac-card').classList.add('active');
+
+            // Change badge to evacuate mode
+            const badge = document.getElementById('gps-badge');
+            badge.textContent = 'EVACUATE';
+            badge.className = 'status-badge badge-evacuate';
+
+            // Vibrate phone if supported
+            if (navigator.vibrate) {
+                navigator.vibrate([200, 100, 200, 100, 500]);
+            }
+        });
+
+        // Allow joining with Enter key
+        document.getElementById('name-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') joinNetwork();
+        });
+    </script>
+</body>
+</html>
