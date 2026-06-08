@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post-Radar Sky Shield</title>
+    <style>
+        body {
+            background-color: #0b0f19;
+            color: #e2e8f0;
+            font-family: 'Courier New', Courier, monospace;
+            margin: 0;
+            padding: 20px;
+        }
+        .header {
+            border-bottom: 2px solid #1e293b;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+        .sidebar {
+            width: 340px;
+            background: #111827;
+            border: 1px solid #1e293b;
+            padding: 15px;
+            border-radius: 6px;
+        }
+        .main-display {
+            flex-grow: 1;
+            background: #111827;
+            border: 1px solid #1e293b;
+            padding: 20px;
+            border-radius: 6px;
+        }
+        .status-badge {
+            padding: 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 15px;
+            letter-spacing: 1px;
+        }
+        .scanning { background: #78350f; color: #fbbf24; }
+        .intercept { background: #991b1b; color: #f87171; border: 1px solid red; animation: blink 0.8s infinite; }
+        
+        #tactical-canvas {
+            width: 100%;
+            height: 480px;
+            background: #030712;
+            border: 1px solid #374151;
+            border-radius: 4px;
+        }
+        .hud-box {
+            background: #022329;
+            border: 1px solid #0e7490;
+            padding: 12px;
+            margin-top: 15px;
+            border-radius: 4px;
+            color: #38bdf8;
+        }
+        .assignment-card {
+            background: #1f2937;
+            border-left: 4px solid #06b6d4;
+            padding: 8px;
+            margin-top: 8px;
+            font-size: 12px;
+        }
+        .assigned {
+            border-left-color: #ef4444 !important;
+            background: #3f1515 !important;
+        }
+        @keyframes blink { 50% { opacity: 0.4; } }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🛡️ POST-RADAR SKY SHIELD</h1>
+        <div>COORDINATED SWARM MESH ALGORITHMS // DISTRIBUTED WARFARE INTERCEPT ENGINE</div>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <h3>📡 SYSTEM STATUS</h3>
+            <div id="status-box" class="status-badge scanning">GRID SECURE</div>
+            
+            <div class="hud-box">
+                <h4>🔒 TARGET TELEMETRY</h4>
+                <div style="font-size:11px;">CLASSIFICATION: <span style="color:red; font-weight:bold;">HOSTILE INTRUDER</span></div>
+                <div style="font-size:11px; margin-top:5px;">VELOCITY: <span id="target-speed" style="color:#f97316; font-weight:bold;">0.00 m/s</span></div>
+            </div>
+            
+            <div class="hud-box" style="background:#090d16; border-color:#1e293b; color:#94a3b8;">
+                <h4>🛸 SWARM MESH ALLOCATION</h4>
+                <div id="drone-alpha-card" class="assignment-card">
+                    <b>🛸 DRONE ALPHA</b><br>Status: Patrol Grid // VIO Active
+                </div>
+                <div id="drone-bravo-card" class="assignment-card">
+                    <b>🛸 DRONE BRAVO</b><br>Status: Patrol Grid // VIO Active
+                </div>
+                <div id="drone-charlie-card" class="assignment-card">
+                    <b>🛸 DRONE CHARLIE</b><br>Status: Patrol Grid // VIO Active
+                </div>
+            </div>
+        </div>
+
+        <div class="main-display">
+            <h3>🎯 DISTRIBUTED AIRSPACE INTERCEPT PROFILE</h3>
+            <canvas id="tactical-canvas"></canvas>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('tactical-canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+
+        let lastTimestamp = 0;
+
+        function drawGrid() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#1f2937'; ctx.lineWidth = 1;
+            for(let i = 0; i < canvas.width; i += 40) {
+                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
+            }
+            ctx.strokeStyle = '#374151'; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(0, canvas.height - 20); ctx.lineTo(canvas.width, canvas.height - 20); ctx.stroke();
+        }
+
+        async function fetchBackendData() {
+            try {
+                const response = await fetch('telemetry.json', { cache: "no-store" });
+                const data = await response.json();
+                
+                if (data.timestamp !== lastTimestamp) {
+                    lastTimestamp = data.timestamp;
+                    
+                    document.getElementById('target-speed').innerText = `${data.target_speed.toFixed(2)} m/s`;
+                    
+                    drawGrid();
+                    
+                    const statusBox = document.getElementById('status-box');
+                    
+                    // Reset assignment HUD cards styling
+                    document.getElementById('drone-alpha-card').className = "assignment-card";
+                    document.getElementById('drone-bravo-card').className = "assignment-card";
+                    document.getElementById('drone-charlie-card').className = "assignment-card";
+                    
+                    document.getElementById('drone-alpha-card').innerHTML = `<b>🛸 DRONE ALPHA</b><br>Pos X: ${data.drone_alpha_x.toFixed(0)}m | VIO Speed: ${data.drone_speed.toFixed(1)}m/s`;
+                    document.getElementById('drone-bravo-card').innerHTML = `<b>🛸 DRONE BRAVO</b><br>Pos X: ${data.drone_bravo_x.toFixed(0)}m | VIO Speed: Stable`;
+                    document.getElementById('drone-charlie-card').innerHTML = `<b>🛸 DRONE CHARLIE</b><br>Pos X: ${data.drone_charlie_x.toFixed(0)}m | VIO Speed: Stable`;
+
+                    // Draw communication mesh lines between the three drones
+                    ctx.strokeStyle = 'rgba(6, 182, 212, 0.25)'; ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(data.drone_alpha_x, 200); ctx.lineTo(data.drone_bravo_x, 150);
+                    ctx.lineTo(data.drone_charlie_x, 230); ctx.lineTo(data.drone_alpha_x, 200);
+                    ctx.stroke();
+
+                    // Draw Drones
+                    ctx.fillStyle = '#06b6d4';
+                    ctx.fillRect(data.drone_alpha_x, 200, 14, 14);
+                    ctx.fillText("Drone_Alpha", data.drone_alpha_x - 15, 190);
+                    
+                    ctx.fillRect(data.drone_bravo_x, 150, 14, 14);
+                    ctx.fillText("Drone_Bravo", data.drone_bravo_x - 15, 140);
+                    
+                    ctx.fillRect(data.drone_charlie_x, 230, 14, 14);
+                    ctx.fillText("Drone_Charlie", data.drone_charlie_x - 15, 220);
+
+                    if (data.is_locked) {
+                        statusBox.className = "status-badge intercept";
+                        statusBox.innerText = `🚨 SWARM ENGAGED 🚨`;
+                        
+                        // Dynamically light up the HUD card of the assigned interceptor drone
+                        let assignedId = data.assigned_interceptor.toLowerCase().replace('_', '-');
+                        document.getElementById(`${assignedId}-card`).className = "assignment-card assigned";
+                        document.getElementById(`${assignedId}-card`).innerHTML += "<br><span style='color:#f87171; font-weight:bold;'>🔥 TRACKING & ENGAGING TARGET</span>";
+
+                        // Draw weapon target tracking crosshairs
+                        ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.arc(data.missile_x, data.missile_z, 15, 0, 2 * Math.PI);
+                        ctx.moveTo(data.missile_x - 22, data.missile_z); ctx.lineTo(data.missile_x + 22, data.missile_z);
+                        ctx.moveTo(data.missile_x, data.missile_z - 22); ctx.lineTo(data.missile_x, data.missile_z + 22);
+                        ctx.stroke();
+
+                        // Draw kinetic laser/intercept line from the designated drone to the target coordinates
+                        let dx = data[`${data.assigned_interceptor.toLowerCase()}_x`];
+                        let dy = (data.assigned_interceptor === "Drone_Alpha") ? 207 : (data.assigned_interceptor === "Drone_Bravo") ? 157 : 237;
+                        
+                        ctx.strokeStyle = '#f43f5e'; ctx.lineWidth = 2; ctx.setLineDash([2, 4]);
+                        ctx.beginPath(); ctx.moveTo(dx + 7, dy); ctx.lineTo(data.missile_x, data.missile_z); ctx.stroke();
+                        ctx.setLineDash([]);
+                    } else {
+                        statusBox.className = "status-badge scanning";
+                        statusBox.innerText = "AIRSPACE SCAN SECURE";
+                    }
+                }
+            } catch (err) {}
+        }
+
+        drawGrid();
+        setInterval(fetchBackendData, 100);
+    </script>
+</body>
+</html>
