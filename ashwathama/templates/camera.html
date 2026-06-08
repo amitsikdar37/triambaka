@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ashwathama Drone Camera Stream</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0d1117;
+            color: #c9d1d9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            max-width: 300px;
+        }
+        select, button {
+            width: 100%;
+            padding: 12px;
+            font-size: 1rem;
+            border-radius: 8px;
+            border: 1px solid #30363d;
+            background-color: #21262d;
+            color: #c9d1d9;
+            cursor: pointer;
+        }
+        button.start {
+            background-color: #238636;
+            color: #ffffff;
+            font-weight: bold;
+        }
+        button.stop {
+            background-color: #da3633;
+            color: #ffffff;
+            font-weight: bold;
+            display: none;
+        }
+        video {
+            width: 100%;
+            max-width: 400px;
+            border: 2px solid #30363d;
+            border-radius: 8px;
+            background-color: #000;
+        }
+        .status {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #8b949e;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Drone Camera Feed</h1>
+
+    <div class="controls">
+        <select id="drone-id">
+            <option value="Drone_Alpha">Drone Alpha</option>
+            <option value="Drone_Bravo">Drone Bravo</option>
+            <option value="Drone_Charlie">Drone Charlie</option>
+        </select>
+        <button id="start-btn" class="start">Start Transmission</button>
+        <button id="stop-btn" class="stop">Stop Transmission</button>
+    </div>
+
+    <video id="video" autoplay playsinline muted></video>
+    <div class="status" id="status-text">Disconnected</div>
+
+    <!-- Hidden canvas to grab frames from the video element -->
+    <canvas id="canvas" style="display:none;"></canvas>
+
+    <script>
+        const socket = io();
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const startBtn = document.getElementById('start-btn');
+        const stopBtn = document.getElementById('stop-btn');
+        const droneSelect = document.getElementById('drone-id');
+        const statusText = document.getElementById('status-text');
+
+        let stream = null;
+        let streamingInterval = null;
+
+        // Settings
+        const TARGET_FPS = 10;
+        const MS_PER_FRAME = 1000 / TARGET_FPS;
+
+        socket.on('connect', () => {
+            statusText.innerText = 'Connected to Server. Ready to stream.';
+            statusText.style.color = '#3fb950';
+        });
+
+        socket.on('disconnect', () => {
+            statusText.innerText = 'Disconnected from Server.';
+            statusText.style.color = '#da3633';
+            stopStreaming();
+        });
+
+        startBtn.addEventListener('click', async () => {
+            try {
+                // Request back camera
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "environment", width: { ideal: 640 }, height: { ideal: 480 } },
+                    audio: false
+                });
+                video.srcObject = stream;
+                
+                // Wait until video metadata is loaded so we know the actual dimensions
+                video.onloadedmetadata = () => {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    
+                    startBtn.style.display = 'none';
+                    stopBtn.style.display = 'block';
+                    droneSelect.disabled = true;
+                    statusText.innerText = 'Transmitting live feed...';
+                    statusText.style.color = '#3fb950';
+
+                    // Start extracting frames and sending them
+                    streamingInterval = setInterval(sendFrame, MS_PER_FRAME);
+                };
+            } catch (err) {
+                console.error(err);
+                alert('Could not access camera. Please ensure you clicked "Proceed" on the security warning and granted camera permissions.');
+            }
+        });
+
+        stopBtn.addEventListener('click', stopStreaming);
+
+        function stopStreaming() {
+            if (streamingInterval) {
+                clearInterval(streamingInterval);
+                streamingInterval = null;
+            }
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
+            }
+            startBtn.style.display = 'block';
+            stopBtn.style.display = 'none';
+            droneSelect.disabled = false;
+            statusText.innerText = 'Transmission Stopped.';
+            statusText.style.color = '#8b949e';
+        }
+
+        function sendFrame() {
+            if (!stream || !socket.connected) return;
+            
+            // Draw current video frame to canvas
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // Convert to base64 JPEG
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.6); // 60% quality to save bandwidth
+            
+            // Send to server
+            socket.emit('video_frame', {
+                drone_id: droneSelect.value,
+                image: dataUrl
+            });
+        }
+    </script>
+</body>
+</html>
