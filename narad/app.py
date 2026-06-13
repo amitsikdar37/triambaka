@@ -1,3 +1,11 @@
+import sys
+
+# Workaround for eventlet compatibility issues on Python 3.12+
+try:
+    import eventlet
+except Exception:
+    sys.modules['eventlet'] = None
+
 from flask import Flask, render_template, request
 from flask_socketio import SocketIO, emit, join_room, leave_room
 
