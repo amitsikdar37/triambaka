@@ -157,8 +157,8 @@ def process_frames():
                     class_id = int(box.cls[0])
                     confidence = float(box.conf[0])
                     
-                    # Look for Cell Phone (67)
-                    if class_id == 67 and confidence > 0.4:
+                    # Look for Cell Phone (67) or Laptop (63)
+                    if class_id in [63, 67] and confidence > 0.4:
                         local_locked = True
                         x1, y1, x2, y2 = box.xyxy[0]
                         

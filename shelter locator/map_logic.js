@@ -1,5 +1,5 @@
-// IIT Patna Coordinates
-const IITP_CENTER = [25.5358, 84.8511];
+// Digha Ghat Coordinates
+const DIGHA_CENTER = [25.6411, 85.0905];
 
 // Define Map Tile Layers
 const tacticalLight = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
@@ -21,7 +21,7 @@ const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/servi
 
 // Initialize Map
 const map = L.map('map', {
-    center: IITP_CENTER,
+    center: DIGHA_CENTER,
     zoom: 16,
     layers: [tacticalLight]
 });
@@ -38,16 +38,12 @@ L.control.layers(baseMaps, null, { collapsed: false, position: 'topright' }).add
 const socket = io();
 
 // --- FIXED REFERENCE POINTS ---
-const hostels = [
-    { id: 'Kalam Hostel', lat: 25.5365, lon: 84.8480, color: '#ef4444' },
-    { id: 'Aryabhatta Hostel', lat: 25.5350, lon: 84.8490, color: '#ef4444' },
-    { id: 'CV Raman Hostel', lat: 25.5375, lon: 84.8505, color: '#ef4444' }
-];
+const hostels = [];
 
 const bunkers = [
-    { id: 'Academic Bunker Alpha', lat: 25.5340, lon: 84.8530, max_capacity: 1500, current_occupancy: 0, color: '#138808' },
-    { id: 'Sports Field Bunker', lat: 25.5330, lon: 84.8480, max_capacity: 1000, current_occupancy: 0, color: '#138808' },
-    { id: 'Main Gate Bunker', lat: 25.5380, lon: 84.8550, max_capacity: 800, current_occupancy: 0, color: '#138808' }
+    { id: 'Digha Ghat Bunker Alpha', lat: 25.6393, lon: 85.0924, max_capacity: 1500, current_occupancy: 0, color: '#138808' },
+    { id: 'Riverside Bunker', lat: 25.6383, lon: 85.0874, max_capacity: 1000, current_occupancy: 0, color: '#138808' },
+    { id: 'Market Bunker', lat: 25.6433, lon: 85.0944, max_capacity: 800, current_occupancy: 0, color: '#138808' }
 ];
 
 // --- LIVE USER TRACKING ---
@@ -268,6 +264,72 @@ function triggerEvacuation() {
     socket.emit('admin:evacuate');
 }
 
+// --- OSRM ROUTING HELPERS ---
+async function fetchRoute(startLng, startLat, endLng, endLat) {
+    const url = `http://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${endLng},${endLat}?geometries=geojson&overview=full`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+        // geojson is [lng, lat]
+        return data.routes[0].geometry.coordinates;
+    }
+    return null;
+}
+
+function animateAlongPolyline(marker, coordinates, durationMs) {
+    if (!coordinates || coordinates.length < 2) return;
+    
+    let totalDist = 0;
+    const segmentDistances = [];
+    
+    for (let i = 0; i < coordinates.length - 1; i++) {
+        const p1 = L.latLng(coordinates[i][1], coordinates[i][0]);
+        const p2 = L.latLng(coordinates[i+1][1], coordinates[i+1][0]);
+        const d = p1.distanceTo(p2);
+        segmentDistances.push(d);
+        totalDist += d;
+    }
+    
+    const startTime = Date.now();
+    
+    function step() {
+        const now = Date.now();
+        const progress = Math.min((now - startTime) / durationMs, 1);
+        
+        const targetDist = progress * totalDist;
+        let distAccum = 0;
+        let segmentIndex = 0;
+        
+        while (segmentIndex < segmentDistances.length) {
+            if (distAccum + segmentDistances[segmentIndex] >= targetDist) {
+                break;
+            }
+            distAccum += segmentDistances[segmentIndex];
+            segmentIndex++;
+        }
+        
+        if (segmentIndex >= segmentDistances.length) {
+            segmentIndex = segmentDistances.length - 1;
+        }
+        
+        const segmentProgress = segmentDistances[segmentIndex] === 0 ? 1 : 
+            (targetDist - distAccum) / segmentDistances[segmentIndex];
+            
+        const p1 = coordinates[segmentIndex];
+        const p2 = coordinates[segmentIndex + 1];
+        
+        const currentLng = p1[0] + (p2[0] - p1[0]) * segmentProgress;
+        const currentLat = p1[1] + (p2[1] - p1[1]) * segmentProgress;
+        
+        marker.setLatLng([currentLat, currentLng]);
+        
+        if (progress < 1) {
+            requestAnimationFrame(step);
+        }
+    }
+    requestAnimationFrame(step);
+}
+
 // Receive assignments from server
 socket.on('evacuate:assignments', (data) => {
     const { assignments, bunkers: updatedBunkers } = data;
@@ -278,30 +340,35 @@ socket.on('evacuate:assignments', (data) => {
 
     isEvacuationActive = true;
 
-    // Bunker occupancies are now calculated dynamically via proximity loop
-    /*
-    updatedBunkers.forEach(ub => {
-        const local = bunkers.find(b => b.id === ub.id);
-        if (local) {
-            local.current_occupancy = ub.current_occupancy;
-            if (local.marker) {
-                local.marker.setTooltipContent(getBunkerTooltipHTML(local.id, local.current_occupancy, local.max_capacity));
-            }
-        }
-    });
-    */
+    // Draw route lines from each user to their assigned bunker via OSRM
+    assignments.forEach((a, index) => {
+        setTimeout(async () => {
+            const userEntry = liveUserMarkers[a.socketId];
+            if (!userEntry) return;
 
-    // Draw route lines from each user to their assigned bunker
-    assignments.forEach(a => {
-        const userEntry = liveUserMarkers[a.socketId];
-        if (userEntry) {
             const startLatLng = userEntry.marker.getLatLng();
             const endLatLng = [a.bunkerLat, a.bunkerLon];
 
-            const polyline = L.polyline([
-                [startLatLng.lat, startLatLng.lng],
-                endLatLng
-            ], {
+            let coordinates = null;
+            
+            try {
+                coordinates = await fetchRoute(startLatLng.lng, startLatLng.lat, endLatLng[1], endLatLng[0]);
+            } catch (err) {
+                console.error("OSRM Route error", err);
+            }
+
+            // Fallback to straight line if API fails
+            if (!coordinates) {
+                coordinates = [
+                    [startLatLng.lng, startLatLng.lat],
+                    [endLatLng[1], endLatLng[0]]
+                ];
+            }
+
+            // L.polyline expects [lat, lng]
+            const latLngs = coordinates.map(c => [c[1], c[0]]);
+
+            const polyline = L.polyline(latLngs, {
                 color: '#ff9933',
                 weight: 3,
                 dashArray: '8, 12',
@@ -310,37 +377,17 @@ socket.on('evacuate:assignments', (data) => {
             }).addTo(map);
 
             routeLines.push(polyline);
-
             logToDashboard(`→ <b>${a.userName}</b> assigned to <b>${a.bunkerName}</b> (${a.distMeters}m)`);
 
-            // Animate simulated users physically walking to the bunker
+            // Animate simulated users physically walking to the bunker along roads
             if (userEntry.isSimulated) {
-                // Speed up walking (1.5 m/s) by 5x so it takes ~10-40 seconds
                 const durationMs = Math.max(5000, (a.distMeters / (1.5 * 5)) * 1000); 
-                const startTime = Date.now();
-                
-                function animateMarker() {
-                    const now = Date.now();
-                    const progress = Math.min((now - startTime) / durationMs, 1);
-                    
-                    // easeInOutQuad
-                    const ease = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
-                    
-                    const currentLat = startLatLng.lat + (endLatLng[0] - startLatLng.lat) * ease;
-                    const currentLng = startLatLng.lng + (endLatLng[1] - startLatLng.lng) * ease;
-                    
-                    userEntry.marker.setLatLng([currentLat, currentLng]);
-                    
-                    if (progress < 1) {
-                        requestAnimationFrame(animateMarker);
-                    }
-                }
-                requestAnimationFrame(animateMarker);
+                animateAlongPolyline(userEntry.marker, coordinates, durationMs);
             }
-        }
+        }, index * 80); // 80ms stagger to prevent OSRM API IP rate limiting
     });
 
-    logToDashboard(`✅ ${assignments.length} users assigned to bunkers.`, 'success');
+    logToDashboard(`✅ ${assignments.length} users routing.`, 'success');
 
     const btn = document.getElementById('evacuate-btn');
     btn.disabled = false;

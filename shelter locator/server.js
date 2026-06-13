@@ -18,9 +18,9 @@ const io = new Server(server, {
 
 // --- Bunker Data (shared between server and clients) ---
 const bunkers = [
-    { id: 'Academic Bunker Alpha', lat: 25.5340, lon: 84.8530, max_capacity: 1500, strength: 95, current_occupancy: 0 },
-    { id: 'Sports Field Bunker', lat: 25.5330, lon: 84.8480, max_capacity: 1000, strength: 80, current_occupancy: 0 },
-    { id: 'Main Gate Bunker', lat: 25.5380, lon: 84.8550, max_capacity: 800, strength: 85, current_occupancy: 0 }
+    { id: 'Digha Ghat Bunker Alpha', lat: 25.6393, lon: 85.0924, max_capacity: 1500, strength: 95, current_occupancy: 0 },
+    { id: 'Riverside Bunker', lat: 25.6383, lon: 85.0874, max_capacity: 1000, strength: 80, current_occupancy: 0 },
+    { id: 'Market Bunker', lat: 25.6433, lon: 85.0944, max_capacity: 800, strength: 85, current_occupancy: 0 }
 ];
 
 // --- Live User Tracking ---
@@ -30,39 +30,19 @@ const trackedUsers = new Map(); // socketId -> { name, lat, lon, lastUpdate, ass
 const simulatedUsers = [];
 
 function initSimulatedUsers() {
-    const IITP_CENTER = { lat: 25.5358, lon: 84.8511 };
+    const DIGHA_CENTER = { lat: 25.6411, lon: 85.0905 };
     
     // Add 40 random civilians around campus
     for (let i = 0; i < 40; i++) {
         simulatedUsers.push({
-            id: `sim_campus_${i}`,
+            id: `sim_digha_${i}`,
             name: `Civilian ${i+1}`,
-            lat: IITP_CENTER.lat + (Math.random() - 0.5) * 0.015,
-            lon: IITP_CENTER.lon + (Math.random() - 0.5) * 0.015,
+            lat: DIGHA_CENTER.lat + (Math.random() - 0.5) * 0.015,
+            lon: DIGHA_CENTER.lon + (Math.random() - 0.5) * 0.015,
             isSimulated: true,
             assignedBunker: null
         });
     }
-
-    // Add 20 students per hostel
-    const hostels = [
-        { id: 'Kalam Hostel', lat: 25.5365, lon: 84.8480 },
-        { id: 'Aryabhatta Hostel', lat: 25.5350, lon: 84.8490 },
-        { id: 'CV Raman Hostel', lat: 25.5375, lon: 84.8505 }
-    ];
-
-    hostels.forEach(h => {
-        for (let i = 0; i < 20; i++) {
-            simulatedUsers.push({
-                id: `sim_${h.id.replace(/\s+/g, '_')}_${i}`,
-                name: `Student (${h.id})`,
-                lat: h.lat + (Math.random() - 0.5) * 0.002,
-                lon: h.lon + (Math.random() - 0.5) * 0.002,
-                isSimulated: true,
-                assignedBunker: null
-            });
-        }
-    });
 }
 initSimulatedUsers();
 
@@ -137,38 +117,95 @@ io.on('connection', (socket) => {
     });
 
     // Admin triggers evacuation
-    socket.on('admin:evacuate', () => {
+    socket.on('admin:evacuate', async () => {
         console.log('[EVACUATE] Admin triggered evacuation!');
 
         // Reset bunker occupancy
         bunkers.forEach(b => b.current_occupancy = 0);
 
         const assignments = [];
-
         const allUsers = getAllUsers();
+        const userEntries = Object.entries(allUsers);
+        
+        let useOSRM = false;
+        let distanceMatrix = []; // row = user index, col = bunker index
+        
+        if (bunkers.length + userEntries.length <= 100) {
+            try {
+                // Build coordinate string
+                const coords = [];
+                // First add bunkers
+                bunkers.forEach(b => coords.push(`${b.lon},${b.lat}`));
+                // Then add users
+                userEntries.forEach(([id, user]) => coords.push(`${user.lon},${user.lat}`));
+                
+                const coordsString = coords.join(';');
+                const destString = bunkers.map((_, i) => i).join(';');
+                const srcString = userEntries.map((_, i) => i + bunkers.length).join(';');
+                
+                const osrmUrl = `http://router.project-osrm.org/table/v1/driving/${coordsString}?sources=${srcString}&destinations=${destString}&annotations=distance`;
+                
+                const response = await fetch(osrmUrl);
+                const data = await response.json();
+                
+                if (data.code === 'Ok') {
+                    distanceMatrix = data.distances; // 2D array: distanceMatrix[userIndex][bunkerIndex] in meters
+                    useOSRM = true;
+                } else {
+                    console.error('[OSRM Table API Error]', data.message);
+                }
+            } catch (err) {
+                console.error('[OSRM Table API Exception]', err);
+            }
+        } else {
+            console.warn('[EVACUATE] Too many users for OSRM table API. Falling back to straight-line.');
+        }
 
-        Object.entries(allUsers).forEach(([id, user]) => {
-            const result = findNearestBunker(user.lat, user.lon);
-            if (result) {
-                result.bunker.current_occupancy++;
-                user.assignedBunker = result.bunker.id;
-                const distMeters = Math.round(result.distKm * 1000);
+        userEntries.forEach(([id, user], userIndex) => {
+            let bestBunker = null;
+            let bestDist = Infinity; // distance in meters
+            
+            if (useOSRM && distanceMatrix[userIndex]) {
+                const dists = distanceMatrix[userIndex];
+                bunkers.forEach((b, bIndex) => {
+                    if (b.current_occupancy >= b.max_capacity) return;
+                    const d = dists[bIndex];
+                    if (d !== null && d < bestDist) {
+                        bestDist = d;
+                        bestBunker = b;
+                    }
+                });
+            }
+            
+            // Fallback to straight-line if OSRM fails, route not found, or over capacity
+            if (!bestBunker) {
+                const result = findNearestBunker(user.lat, user.lon);
+                if (result) {
+                    bestBunker = result.bunker;
+                    bestDist = result.distKm * 1000;
+                }
+            }
+
+            if (bestBunker) {
+                bestBunker.current_occupancy++;
+                user.assignedBunker = bestBunker.id;
+                const distMeters = Math.round(bestDist);
 
                 assignments.push({
                     socketId: id,
                     userName: user.name,
-                    bunkerName: result.bunker.id,
-                    bunkerLat: result.bunker.lat,
-                    bunkerLon: result.bunker.lon,
+                    bunkerName: bestBunker.id,
+                    bunkerLat: bestBunker.lat,
+                    bunkerLon: bestBunker.lon,
                     distMeters
                 });
 
                 // Send personal evacuation instruction to this user's phone if real
                 if (!user.isSimulated) {
                     io.to(id).emit('evacuate:assigned', {
-                        bunkerName: result.bunker.id,
-                        bunkerLat: result.bunker.lat,
-                        bunkerLon: result.bunker.lon,
+                        bunkerName: bestBunker.id,
+                        bunkerLat: bestBunker.lat,
+                        bunkerLon: bestBunker.lon,
                         distMeters
                     });
                 }
